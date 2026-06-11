@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Today, for Chris</title>
+<style>
+  :root {
+    --steam:   #fbf8f2;
+    --kiln:    #e8a14e;
+    --ink-dim: rgba(251,248,242,.82);
+    --good:    #6bbf8a;
+    --bad:     #d98a6a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: #1a1512;
+    color: var(--steam);
+    font-family: Georgia, 'Times New Roman', serif;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .wordmark {
+    position: fixed; top: calc(18px + env(safe-area-inset-top)); left: 0; right: 0;
+    z-index: 4; text-align: center;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 13px; letter-spacing: .42em; text-transform: uppercase;
+    color: var(--kiln); text-indent: .42em;
+    text-shadow: 0 1px 14px rgba(0,0,0,.6);
+    pointer-events: none;
+  }
+  .stage { position: fixed; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; }
+
+  /* photo + its blur layer */
+  .photo {
+    position: absolute; inset: 0;
+    background-size: cover; background-position: center; background-repeat: no-repeat;
+    filter: blur(34px) saturate(1.1);
+    transform: scale(1.12);
+    transition: filter 1.4s ease, transform 1.4s ease;
+  }
+  .photo.unlocked { filter: blur(0) saturate(1); transform: scale(1); }
+
+  .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(to top,
+      rgba(20,16,14,.94) 0%, rgba(20,16,14,.78) 26%, rgba(20,16,14,.42) 52%,
+      rgba(20,16,14,.12) 74%, rgba(20,16,14,0) 100%);
+    transition: opacity 1.4s ease;
+  }
+  .scrim.lifted { opacity: .55; }
+
+  .content {
+    position: relative; z-index: 2;
+    padding: 0 26px calc(34px + env(safe-area-inset-bottom)) 26px;
+    max-width: 640px; margin: 0 auto; width: 100%;
+  }
+
+  .eyebrow {
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--kiln); margin-bottom: 14px; text-shadow: 0 1px 12px rgba(0,0,0,.5);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  }
+  .score { color: var(--ink-dim); letter-spacing: .14em; }
+
+  .question {
+    font-size: 26px; line-height: 1.3; font-weight: 400; letter-spacing: -.01em;
+    text-shadow: 0 2px 20px rgba(0,0,0,.6); margin-bottom: 22px;
+  }
+
+  .options { display: flex; flex-direction: column; gap: 11px; }
+  .opt {
+    width: 100%; text-align: left;
+    font-family: Georgia, serif; font-size: 17px; line-height: 1.4;
+    color: var(--steam); background: rgba(251,248,242,.10);
+    border: 1px solid rgba(251,248,242,.28); border-radius: 14px;
+    padding: 15px 18px; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(8px);
+    transition: background .2s ease, border-color .2s ease, transform .1s ease, opacity .3s ease;
+  }
+  .opt:active { transform: scale(.985); }
+  .opt.correct { background: rgba(107,191,138,.22); border-color: var(--good); }
+  .opt.wrong   { background: rgba(217,138,106,.18); border-color: var(--bad); opacity: .85; }
+  .opt:disabled { cursor: default; }
+
+  .feedback {
+    margin-top: 20px; font-size: 16px; line-height: 1.55; color: var(--ink-dim);
+    text-shadow: 0 1px 14px rgba(0,0,0,.5); min-height: 1px;
+  }
+  .feedback .nudge { color: var(--bad); }
+  .feedback .fact  { color: var(--steam); }
+
+  .stamp {
+    margin-top: 26px; padding-top: 16px; border-top: 1px solid rgba(251,248,242,.22);
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: rgba(251,248,242,.6);
+  }
+  .stamp .mark { color: var(--kiln); letter-spacing: .3em; }
+
+  @media (min-width: 740px) {
+    .question { font-size: 30px; }
+    .content { padding-bottom: 48px; }
+  }
+
+  .loading {
+    position: absolute; inset: 0; z-index: 3;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'SF Mono', ui-monospace, Menlo, monospace;
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: rgba(251,248,242,.5);
+  }
+</style>
+</head>
+<body>
+  <div class="wordmark">Mug&nbsp;Shot</div>
+  <div class="stage">
+    <div class="photo" id="photo"></div>
+    <div class="scrim" id="scrim"></div>
+    <div class="content">
+      <div class="eyebrow">
+        <span id="label">Today's case</span>
+        <span class="score" id="score"></span>
+      </div>
+      <h1 class="question" id="question"></h1>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+      <div class="stamp">
+        <span id="date"></span>
+        <span class="mark">&bull; &bull; &bull;</span>
+      </div>
+    </div>
+  </div>
+  <div class="loading" id="loading">warming up&hellip;</div>
+
+<script>
+/* ================================================================
+   SETUP - point at your GitHub repo + image folder.
+   Just drop photos into the folder and commit; the page finds them.
+   ================================================================ */
+const GH_USER   = "ElenaH77";   // must match GitHub username EXACTLY (case-sensitive)
+const GH_REPO   = "MugShot";    // must match repo name EXACTLY (case-sensitive)
+const GH_FOLDER = "photos";     // the folder inside the repo holding images
+const GH_BRANCH = "main";       // your branch (usually "main")
+
+/* ================================================================
+   TEST_MODE - set to true while building/testing, false to gift.
+   When true:
+     - a new RANDOM question loads every time (re-test freely)
+     - "Cases Solved" and today's solved-state RESET on every load
+       so the quiz/unlock flow is always replayable
+   When false: normal one-per-day behavior with the saved counter.
+   >>> REMEMBER to set this back to false before you print the QR! <<<
+   ================================================================ */
+const TEST_MODE = true;
+
+/* ================================================================
+   QUESTIONS - the only thing you edit. One per day, loops.
+   Each question:
+     q       = the question text
+     options = the answer choices (any number)
+     answer  = the INDEX of the correct one (0 = first, 1 = second, ...)
+     fact    = the bit shown after he gets it right (your old "fact")
+
+   COPY THIS BLOCK to add one:
+     { q: "Question here?",
+       options: ["Choice A", "Choice B", "Choice C"],
+       answer: 1,
+       fact: "The thing he learns once he nails it." },
+   ================================================================ */
+const QUESTIONS = [
+
+  /* ===================== CARDINALS & BASEBALL ===================== */
+  { q: "How many World Series titles have the St. Louis Cardinals won - second-most in MLB history?",
+    options: ["9", "11", "7", "14"],
+    answer: 1,
+    fact: "Eleven - behind only the Yankees, and the most of any National League club." },
+  { q: "Which Cardinals legend was nicknamed \"Stan the Man\"?",
+    options: ["Bob Gibson", "Stan Musial", "Lou Brock", "Ozzie Smith"],
+    answer: 1,
+    fact: "Stan Musial - 24 All-Star selections and a name opposing fans gave him out of pure respect." },
+  { q: "Which Cardinals shortstop was famous for doing a backflip and was called \"The Wizard\"?",
+    options: ["Ozzie Smith", "Garry Templeton", "Edgar Renteria", "Dal Maxvill"],
+    answer: 0,
+    fact: "Ozzie Smith - 13 Gold Gloves and the best defensive shortstop most people have ever seen." },
+  { q: "In the 2011 World Series, which Cardinal hit the famous Game 6 walk-off after the team was twice down to its last strike?",
+    options: ["Albert Pujols", "Yadier Molina", "David Freese", "Matt Holliday"],
+    answer: 2,
+    fact: "David Freese - a hometown St. Louis kid - kept the season alive and they won it all in Game 7." },
+  { q: "Pitcher Bob Gibson's 1968 season was so dominant MLB changed a rule the next year. What did they do?",
+    options: ["Lowered the pitching mound", "Added the designated hitter", "Shrank the strike zone", "Deadened the baseball"],
+    answer: 0,
+    fact: "They lowered the mound from 15 to 10 inches. Gibson's 1.12 ERA basically broke the sport." },
+  { q: "Yadi the dog shares a name with which beloved Cardinals catcher?",
+    options: ["Yadier Molina", "Ted Simmons", "Tim McCarver", "Darrell Porter"],
+    answer: 0,
+    fact: "Yadier Molina - nine Gold Gloves and two rings across nearly two decades in St. Louis." },
+
+  /* ========================= ST. LOUIS ========================== */
+  { q: "Who designed the Gateway Arch in St. Louis?",
+    options: ["Frank Lloyd Wright", "Eero Saarinen", "I.M. Pei", "Mies van der Rohe"],
+    answer: 1,
+    fact: "Eero Saarinen. At 630 feet, it's the tallest arch in the world and as wide as it is tall." },
+  { q: "St. Louis hosted the World's Fair AND the Olympics in the same year. Which year?",
+    options: ["1896", "1904", "1912", "1928"],
+    answer: 1,
+    fact: "1904 - the fair that supposedly popularized the ice cream cone and put St. Louis on the map." },
+  { q: "Which St. Louis-style food is a local original made by breading and frying the pasta?",
+    options: ["Toasted ravioli", "Gooey butter cake", "Provel pizza", "St. Paul sandwich"],
+    answer: 0,
+    fact: "Toasted ravioli - allegedly a happy accident on The Hill, St. Louis's Italian neighborhood." },
+  { q: "St. Louis's Forest Park is often noted for being larger than which famous park?",
+    options: ["Hyde Park, London", "Central Park, NYC", "Golden Gate Park", "Lincoln Park, Chicago"],
+    answer: 1,
+    fact: "It's about 50% bigger than Central Park - and home to the 1904 World's Fair grounds." },
+  { q: "Which rock 'n' roll pioneer and \"Johnny B. Goode\" author was a St. Louis native?",
+    options: ["Chuck Berry", "Little Richard", "Bo Diddley", "Fats Domino"],
+    answer: 0,
+    fact: "Chuck Berry - there's a statue of him in the Delmar Loop, guitar and all." },
+
+  /* ===================== WORLD GEOGRAPHY ======================== */
+  { q: "What is the capital of Australia?",
+    options: ["Sydney", "Melbourne", "Canberra", "Perth"],
+    answer: 2,
+    fact: "Canberra - purpose-built as a compromise because Sydney and Melbourne couldn't stop arguing." },
+  { q: "Which is the longest river in the world?",
+    options: ["Amazon", "Nile", "Yangtze", "Mississippi"],
+    answer: 1,
+    fact: "The Nile, ~4,130 miles - though the Amazon carries far more water and the title is hotly debated." },
+  { q: "Which country is entirely surrounded by South Africa?",
+    options: ["Eswatini", "Lesotho", "Botswana", "Namibia"],
+    answer: 1,
+    fact: "Lesotho - one of only three countries on Earth completely landlocked by a single other nation." },
+  { q: "The Strait of Gibraltar separates Europe from which continent?",
+    options: ["Asia", "Africa", "South America", "Antarctica"],
+    answer: 1,
+    fact: "Africa - barely 9 miles of water between Spain and Morocco." },
+  { q: "Which country has the most people in the world (as of recent estimates)?",
+    options: ["China", "India", "United States", "Indonesia"],
+    answer: 1,
+    fact: "India overtook China around 2023 to become the most populous country on Earth." },
+  { q: "Mount Kilimanjaro, Africa's highest peak, is located in which country?",
+    options: ["Kenya", "Tanzania", "Uganda", "Ethiopia"],
+    answer: 1,
+    fact: "Tanzania - a free-standing volcano and the tallest mountain on the African continent." },
+
+  /* ===================== WWI & WWII ============================= */
+  { q: "Which 1944 operation was the Allied invasion of Normandy - the largest seaborne invasion in history?",
+    options: ["Operation Market Garden", "Operation Overlord", "Operation Torch", "Operation Husky"],
+    answer: 1,
+    fact: "Operation Overlord - D-Day, June 6, 1944. The beginning of the end on the Western Front." },
+  { q: "The 1942-43 battle widely seen as the turning point of WWII on the Eastern Front was at which city?",
+    options: ["Kiev", "Stalingrad", "Leningrad", "Kursk"],
+    answer: 1,
+    fact: "Stalingrad - a brutal Soviet victory that turned the tide against Germany in the east." },
+  { q: "In WWI, the Allied Powers fought against which group?",
+    options: ["The Central Powers", "The Axis Powers", "The Triple Entente", "The Warsaw Pact"],
+    answer: 0,
+    fact: "The Central Powers - Germany, Austria-Hungary, the Ottoman Empire and Bulgaria." },
+  { q: "Which Pacific battle in 1942 is considered the turning point of the war against Japan?",
+    options: ["Battle of Midway", "Battle of Iwo Jima", "Battle of Okinawa", "Battle of Leyte Gulf"],
+    answer: 0,
+    fact: "Midway - the U.S. sank four Japanese carriers and flipped the balance of the Pacific war." },
+  { q: "Which two countries formed the core of the WWII Axis alongside Japan?",
+    options: ["Germany and Italy", "Germany and Spain", "Italy and the USSR", "Germany and Vichy France"],
+    answer: 0,
+    fact: "Germany and Italy - the Rome-Berlin-Tokyo Axis." },
+
+  /* ===================== ENERGY (WIND & SOLAR) ================== */
+  { q: "What part of a wind turbine actually converts spinning motion into electricity?",
+    options: ["The blades", "The generator", "The tower", "The nacelle cover"],
+    answer: 1,
+    fact: "The generator, housed in the nacelle - the blades just turn the shaft that drives it." },
+  { q: "What does the \"PV\" in solar PV panels stand for?",
+    options: ["Power Voltage", "Photovoltaic", "Peak Value", "Positive Volt"],
+    answer: 1,
+    fact: "Photovoltaic - turning sunlight straight into electricity, no moving parts." },
+  { q: "Roughly how long does it take sunlight to reach Earth, powering every solar panel out there?",
+    options: ["About 8 minutes", "About 8 seconds", "About 8 hours", "Instantly"],
+    answer: 0,
+    fact: "About 8 minutes 20 seconds - so your panels run on slightly-old sunlight." },
+  { q: "The famous grid 'duck curve' describes the daily challenge created by lots of which energy source?",
+    options: ["Wind", "Solar", "Coal", "Nuclear"],
+    answer: 1,
+    fact: "Solar - midday overproduction then a steep evening ramp, drawn out it looks like a duck." },
+  { q: "LEGO's new U.S. factory is being built in Chesterfield, Virginia, with what feature on site?",
+    options: ["A wind farm", "A solar park", "A hydro dam", "A geothermal plant"],
+    answer: 1,
+    fact: "A massive solar park - tens of thousands of panels. (Road trip once it opens, ~2027.)" },
+
+  /* ===================== MOVIES (80s/90s + ALL) ================= */
+  { q: "Complete the line: \"I'll be ___.\" (The Terminator, 1984)",
+    options: ["right back", "back", "watching", "waiting"],
+    answer: 1,
+    fact: "\"I'll be back.\" Four of the most quoted words in movie history." },
+  { q: "Which 1985 film features a DeLorean turned into a time machine?",
+    options: ["WarGames", "Back to the Future", "Weird Science", "Tron"],
+    answer: 1,
+    fact: "Back to the Future - 88 mph and 1.21 gigawatts." },
+  { q: "In The Princess Bride, what does Inigo Montoya repeatedly say he is preparing you to do?",
+    options: ["\"Prepare to run\"", "\"Prepare to die\"", "\"Prepare to lose\"", "\"Prepare to surrender\""],
+    answer: 1,
+    fact: "\"You killed my father. Prepare to die.\" Inconceivable that he'd say anything else." },
+  { q: "Which director made Jaws, E.T., and Jurassic Park?",
+    options: ["George Lucas", "Steven Spielberg", "Ridley Scott", "James Cameron"],
+    answer: 1,
+    fact: "Spielberg - basically the architect of the summer blockbuster." },
+  { q: "What's the name of the fictional boxer played by Sylvester Stallone across six films?",
+    options: ["Rocky Balboa", "Tommy Gunn", "Apollo Creed", "Clubber Lang"],
+    answer: 0,
+    fact: "Rocky Balboa - the Italian Stallion, and the stairs in Philadelphia to prove it." },
+
+  /* ========================= STAR WARS ========================== */
+  { q: "Who says \"No, I am your father\" in The Empire Strikes Back?",
+    options: ["Obi-Wan Kenobi", "Darth Vader", "Emperor Palpatine", "Yoda"],
+    answer: 1,
+    fact: "Darth Vader. And note - he never actually says \"Luke, I am your father.\" Common misquote." },
+  { q: "What kind of creature is Chewbacca?",
+    options: ["Ewok", "Wookiee", "Gungan", "Twi'lek"],
+    answer: 1,
+    fact: "A Wookiee from Kashyyyk - and Han Solo's co-pilot on the Millennium Falcon." },
+  { q: "What is the name of Luke Skywalker's home desert planet?",
+    options: ["Tatooine", "Hoth", "Endor", "Jakku"],
+    answer: 0,
+    fact: "Tatooine - twin suns, moisture farms, and a galaxy's worth of trouble passing through." },
+  { q: "In the Mandalorian, what species is \"Baby Yoda\" (Grogu)?",
+    options: ["Officially unnamed - same as Yoda", "A Jawa", "A Twi'lek", "A Rodian"],
+    answer: 0,
+    fact: "Grogu's species has never been named - the same mystery as Yoda himself." },
+
+  /* ========================= POKER / WSOP ======================= */
+  { q: "In poker, which hand is the strongest?",
+    options: ["Four of a kind", "Full house", "Royal flush", "Straight flush"],
+    answer: 2,
+    fact: "A royal flush - 10 through Ace, all one suit. The unbeatable top of a straight flush." },
+  { q: "What does \"WSOP\" stand for?",
+    options: ["World Series of Poker", "World Society of Players", "Winning Stakes of Poker", "World Standard of Play"],
+    answer: 0,
+    fact: "World Series of Poker - the Main Event winner gets a bracelet and a lot of money." },
+  { q: "The 2003 amateur whose WSOP win sparked the poker boom was famously named what?",
+    options: ["Chris Moneymaker", "Phil Hellmuth", "Doyle Brunson", "Daniel Negreanu"],
+    answer: 0,
+    fact: "Chris Moneymaker - yes, his real name - qualified online for $86 and won $2.5 million." },
+  { q: "In Texas Hold'em, how many 'hole' cards does each player get?",
+    options: ["Two", "Three", "Four", "Five"],
+    answer: 0,
+    fact: "Two - combined with five community cards to make your best five-card hand." },
+  { q: "Which 1998 movie made 'railbirds' and high-stakes poker cool, starring Matt Damon and Edward Norton?",
+    options: ["Rounders", "Casino", "21", "Maverick"],
+    answer: 0,
+    fact: "Rounders - required viewing for anyone who's ever said \"pay that man his money.\"" },
+
+  /* ====================== GAME OF THRONES ======================= */
+  { q: "What are the three words of House Stark?",
+    options: ["Hear Me Roar", "Winter Is Coming", "Fire and Blood", "We Do Not Sow"],
+    answer: 1,
+    fact: "\"Winter Is Coming\" - the most quoted house words in Westeros." },
+  { q: "Which family sits on the throne in King's Landing at the start of the series?",
+    options: ["Stark", "Targaryen", "Baratheon", "Lannister"],
+    answer: 2,
+    fact: "House Baratheon - Robert won the throne by rebellion, though Lannister gold runs everything." },
+  { q: "What is Daenerys Targaryen the \"Mother of\"?",
+    options: ["Wolves", "Dragons", "Lions", "Ravens"],
+    answer: 1,
+    fact: "Dragons - Drogon, Rhaegal, and Viserion, named for men she loved and lost." },
+  { q: "Which sneaky Lannister is nicknamed \"The Imp\"?",
+    options: ["Tywin", "Jaime", "Tyrion", "Joffrey"],
+    answer: 2,
+    fact: "Tyrion - who drinks and knows things, and got most of the best lines." },
+
+  /* ===================== PARKS & REC ============================ */
+  { q: "What fictional Indiana town is Parks and Recreation set in?",
+    options: ["Pawnee", "Eagleton", "Muncie", "Indianapolis"],
+    answer: 0,
+    fact: "Pawnee - first in friendship, fifth in obesity." },
+  { q: "What food does Ron Swanson love above all others?",
+    options: ["Salad", "Breakfast / bacon and eggs", "Sushi", "Pasta"],
+    answer: 1,
+    fact: "Breakfast food - \"Give me all the bacon and eggs you have.\"" },
+  { q: "What is Leslie Knope's all-consuming favorite breakfast food and friendship gift?",
+    options: ["Waffles", "Pancakes", "Donuts", "Bagels"],
+    answer: 0,
+    fact: "Waffles from JJ's Diner - the foundation of her entire value system." },
+
+  /* ===================== THE OFFICE ============================= */
+  { q: "What is the name of the paper company in The Office (US)?",
+    options: ["Dunder Mifflin", "Michael Scott Paper", "Sabre", "Vance Refrigeration"],
+    answer: 0,
+    fact: "Dunder Mifflin, Scranton branch - \"limitless paper in a paperless world.\"" },
+  { q: "Who is the beet-farming, paper-selling, assistant-TO-the-regional-manager?",
+    options: ["Jim Halpert", "Dwight Schrute", "Stanley Hudson", "Kevin Malone"],
+    answer: 1,
+    fact: "Dwight Schrute - of Schrute Farms, and never 'assistant regional manager.'" },
+  { q: "What phrase does Michael Scott infamously overuse?",
+    options: ["\"That's what she said\"", "\"Boom, roasted\"", "\"I declare bankruptcy\"", "All of the above"],
+    answer: 3,
+    fact: "All of them. The man contained multitudes, most of them inappropriate." },
+
+  /* ===================== NEW GIRL =============================== */
+  { q: "In New Girl, what's the name of the drinking game the loft plays with no real rules?",
+    options: ["True American", "Kings", "Power Hour", "Beer Pong"],
+    answer: 0,
+    fact: "True American - 50% drinking, 50% chaos, 0% explainable rules." },
+  { q: "Which New Girl character keeps a 'douchebag jar' he pays into constantly?",
+    options: ["Nick", "Schmidt", "Winston", "Coach"],
+    answer: 1,
+    fact: "Schmidt - the jar funded itself faster than anyone expected." },
+
+  /* ===================== MAD MEN ================================ */
+  { q: "What's the profession of Don Draper and the cast of Mad Men?",
+    options: ["Lawyers", "Advertising", "Journalism", "Banking"],
+    answer: 1,
+    fact: "Advertising - Madison Avenue in the 1960s, hence 'Mad Men.'" },
+  { q: "What is Don Draper's actual birth name, revealed over the series?",
+    options: ["Dick Whitman", "Don Draper (it's real)", "Bert Cooper", "Roger Sterling"],
+    answer: 0,
+    fact: "Dick Whitman - he took a dead man's identity in Korea. The show's central secret." },
+
+  /* ===================== COMMUNITY ============================== */
+  { q: "Community is set at which (very community) college?",
+    options: ["Greendale", "Riverdale", "Hawthorne", "City College"],
+    answer: 0,
+    fact: "Greendale Community College - home of the Human Beings and endless paintball wars." },
+  { q: "What catchphrase does Troy and Abed's hyper-competent friend Annie's... actually, who says \"Cool. Cool cool cool\"?",
+    options: ["Abed", "Jeff Winger", "Pierce", "The Dean"],
+    answer: 1,
+    fact: "Jeff Winger - the disbarred lawyer whose entire personality is deflecting with 'cool cool cool.'" },
+
+  /* ===================== HUTCHISON HOUSEHOLD ==================== */
+  { q: "What is Cece's Girl Scout troop number?",
+    options: ["60353", "60533", "63053", "65033"],
+    answer: 0,
+    fact: "Troop 60353. If you got this without help, frankly, well done." },
+  { q: "What does Elena order at Walter's in Claremont?",
+    options: ["An Arnold Palmer", "A margarita", "Iced coffee", "A lemonade"],
+    answer: 0,
+    fact: "An Arnold Palmer - half iced tea, half lemonade, fully on brand." },
+  { q: "What is the last name of Cece's friend BROOKE?",
+    options: ["Leonard", "Larson", "Lawson", "Lennon"],
+    answer: 0,
+    fact: "Leonard. (Larson is a DIFFERENT friend - that one's a trap, and you fell for it, didn't you.)" },
+  { q: "Who was Cece's Spanish teacher last year?",
+    options: ["Maria", "Sofia", "Elena", "Lucia"],
+    answer: 0,
+    fact: "Maria. Cece could have told you that instantly. That's the whole point." },
+  { q: "What model is Elena's e-bike?",
+    options: ["P5i", "P7i", "S2", "GSD"],
+    answer: 0,
+    fact: "The P5i. You've watched her ride off on it a hundred times - did you know the model? Be honest." },
+  { q: "Yadi is a \"Sato.\" What does that mean?",
+    options: ["A Puerto Rican street mutt", "A specific terrier breed", "A show-dog class", "A type of rescue program"],
+    answer: 0,
+    fact: "Sato is Puerto Rican slang for a street mutt. Yadi came a long way to land on your couch." },
+  { q: "Elena and Chris met at Claremont McKenna College. What year was CMC founded?",
+    options: ["1946", "1936", "1956", "1962"],
+    answer: 0,
+    fact: "1946 - founded for returning WWII GIs. Fun twist: Cece's school, Burgundy Farm, was founded the SAME year." },
+  { q: "Cece's school, Burgundy Farm, made Virginia history in 1950 by being the first to do what?",
+    options: ["Racially integrate", "Go fully outdoors", "Admit girls", "Open a farm campus"],
+    answer: 0,
+    fact: "First school in Virginia to racially integrate - in 1950, before any law required it. A bold place." },
+  { q: "Elena and Chris met during a simulation of which body of government?",
+    options: ["The U.S. Congress", "The U.N.", "The Supreme Court", "A state legislature"],
+    answer: 0,
+    fact: "A congressional simulation. The origin story of the entire Hutchison household, basically." },
+  { q: "Dianne Feinstein, of congressional-simulation fame, held what distinction in the U.S. Senate?",
+    options: ["Longest-serving woman senator in U.S. history", "First woman senator ever", "Only senator from Hawaii", "Longest-serving senator overall"],
+    answer: 0,
+    fact: "She became the longest-serving woman in U.S. Senate history. California, for over 30 years." },
+  { q: "Carl Levin, also from that world, represented which state for decades?",
+    options: ["Michigan", "Minnesota", "Missouri", "Maryland"],
+    answer: 0,
+    fact: "Michigan - its longest-serving U.S. senator, and a longtime Armed Services chairman." },
+  { q: "What's a favorite Hutchison travel spot - a Basque city famous for pintxos and La Concha beach?",
+    options: ["San Sebastian, Spain", "Lisbon, Portugal", "Nice, France", "Bilbao, Spain"],
+    answer: 0,
+    fact: "San Sebastian - arguably the best eating town in the world, and you two know it well." },
+];
+
+function daysSinceEpoch() {
+  const epoch = new Date(2026, 0, 1);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.floor((today - epoch) / 86400000);
+}
+function todayKey() {
+  const n = new Date();
+  return `${n.getFullYear()}-${n.getMonth()+1}-${n.getDate()}`;
+}
+
+/* In TEST_MODE, wipe the saved state on every load so the quiz is
+   always replayable and the counter always starts fresh. */
+if (TEST_MODE) {
+  localStorage.removeItem('mug_correct');
+  localStorage.removeItem('mug_solved_day');
+}
+
+/* lifetime correct count + whether today is already solved, saved on his phone */
+function getCorrectCount() {
+  return parseInt(localStorage.getItem('mug_correct') || '0', 10);
+}
+function bumpCorrectCount() {
+  const n = getCorrectCount() + 1;
+  localStorage.setItem('mug_correct', String(n));
+  return n;
+}
+function solvedToday() {
+  if (TEST_MODE) return false;           // never "already solved" while testing
+  return localStorage.getItem('mug_solved_day') === todayKey();
+}
+function markSolvedToday() {
+  localStorage.setItem('mug_solved_day', todayKey());
+}
+
+/* normal mode: one stable pick per day. test mode: fresh random each load. */
+function pickIndex(len) {
+  if (!len) return -1;
+  if (TEST_MODE) return Math.floor(Math.random() * len);
+  const d = daysSinceEpoch();
+  return ((d % len) + len) % len;
+}
+function pickByDay(arr) {
+  const i = pickIndex(arr.length);
+  return i < 0 ? null : arr[i];
+}
+
+function showScore() {
+  const c = getCorrectCount();
+  document.getElementById('score').textContent = c === 1 ? "1 case solved" : `${c} cases solved`;
+}
+function unlockPhoto() {
+  document.getElementById('photo').classList.add('unlocked');
+  document.getElementById('scrim').classList.add('lifted');
+}
+
+function renderQuestion() {
+  const q = pickByDay(QUESTIONS);
+  document.getElementById('date').textContent =
+    new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  showScore();
+
+  if (!q) return;
+  document.getElementById('question').textContent = q.q;
+
+  const already = solvedToday();
+  const optsEl = document.getElementById('options');
+  const fb = document.getElementById('feedback');
+  optsEl.innerHTML = '';
+
+  q.options.forEach((text, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.textContent = text;
+    if (already) {
+      btn.disabled = true;
+      if (i === q.answer) btn.classList.add('correct');
+    } else {
+      btn.onclick = () => handleAnswer(btn, i, q);
+    }
+    optsEl.appendChild(btn);
+  });
+
+  if (already) {
+    unlockPhoto();
+    fb.innerHTML = `<span class="fact">${q.fact}</span>`;
+  }
+}
+
+function handleAnswer(btn, i, q) {
+  const fb = document.getElementById('feedback');
+  if (i === q.answer) {
+    btn.classList.add('correct');
+    // disable all
+    document.querySelectorAll('.opt').forEach(b => b.disabled = true);
+    unlockPhoto();
+    if (!solvedToday()) {
+      markSolvedToday();
+      bumpCorrectCount();
+      showScore();
+    }
+    fb.innerHTML = `<span class="fact">${q.fact}</span>`;
+  } else {
+    // try-again: mark this one wrong, let the rest stay live
+    btn.classList.add('wrong');
+    btn.disabled = true;
+    fb.innerHTML = `<span class="nudge">Not quite - try again. The photo's waiting.</span>`;
+  }
+}
+
+async function loadPhotos() {
+  const api = `https://api.github.com/repos/${GH_USER}/${GH_REPO}/contents/${GH_FOLDER}?ref=${GH_BRANCH}`;
+  const res = await fetch(api);
+  if (!res.ok) throw new Error("folder fetch failed");
+  const files = await res.json();
+  return files.filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name)).map(f => f.download_url);
+}
+
+async function start() {
+  if (TEST_MODE) {
+    const wm = document.querySelector('.wordmark');
+    if (wm) { wm.textContent = 'Mug Shot \u00B7 TEST MODE'; wm.style.color = '#ff6b6b'; }
+  }
+  renderQuestion();
+  try {
+    const photos = await loadPhotos();
+    const url = pickByDay(photos);
+    if (url) {
+      const img = new Image();
+      img.onload = () => {
+        document.getElementById('photo').style.backgroundImage = `url("${url}")`;
+        document.getElementById('loading').style.display = 'none';
+      };
+      img.onerror = () => { document.getElementById('loading').style.display = 'none'; };
+      img.src = url;
+    } else {
+      document.getElementById('loading').style.display = 'none';
+    }
+  } catch (e) {
+    document.getElementById('loading').style.display = 'none';
+  }
+}
+start();
+</script>
+</body>
+</html>
