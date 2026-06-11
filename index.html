@@ -93,6 +93,36 @@
   .feedback .nudge { color: var(--bad); }
   .feedback .fact  { color: var(--steam); }
 
+  .seephoto {
+    margin-top: 20px;
+    width: 100%;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase;
+    color: #1a1512; background: var(--kiln);
+    border: none; border-radius: 14px; padding: 16px 18px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    transition: transform .1s ease, opacity .3s ease;
+  }
+  .seephoto:active { transform: scale(.985); }
+  .seephoto[hidden] { display: none; }
+
+  /* when revealing: fade the whole card + scrim away so only the photo shows */
+  .content { transition: opacity .6s ease; }
+  body.revealed .content { opacity: 0; pointer-events: none; }
+  body.revealed .scrim   { opacity: 0; }
+  body.revealed .wordmark { opacity: 0; }
+
+  .tap-hint {
+    position: fixed; left: 0; right: 0; bottom: calc(26px + env(safe-area-inset-bottom));
+    z-index: 5; text-align: center;
+    font-family: 'SF Mono', ui-monospace, Menlo, Consolas, monospace;
+    font-size: 11px; letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(251,248,242,.75); text-shadow: 0 1px 12px rgba(0,0,0,.7);
+    pointer-events: none; opacity: 0; transition: opacity .6s ease .3s;
+  }
+  body.revealed .tap-hint { opacity: 1; }
+  .tap-hint[hidden] { display: none; }
+
   .stamp {
     margin-top: 26px; padding-top: 16px; border-top: 1px solid rgba(251,248,242,.22);
     display: flex; align-items: baseline; justify-content: space-between;
@@ -119,7 +149,7 @@
   <div class="stage">
     <div class="photo" id="photo"></div>
     <div class="scrim" id="scrim"></div>
-    <div class="content">
+    <div class="content" id="content">
       <div class="eyebrow">
         <span id="label">Today's case</span>
         <span class="score" id="score"></span>
@@ -127,12 +157,14 @@
       <h1 class="question" id="question"></h1>
       <div class="options" id="options"></div>
       <div class="feedback" id="feedback"></div>
+      <button class="seephoto" id="seephoto" hidden>See the photo</button>
       <div class="stamp">
         <span id="date"></span>
         <span class="mark">&bull; &bull; &bull;</span>
       </div>
     </div>
   </div>
+  <div class="tap-hint" id="taphint" hidden>tap anywhere to return</div>
   <div class="loading" id="loading">warming up&hellip;</div>
 
 <script>
@@ -477,6 +509,24 @@ const QUESTIONS = [
     options: ["San Sebastian, Spain", "Lisbon, Portugal", "Nice, France", "Bilbao, Spain"],
     answer: 0,
     fact: "San Sebastian - arguably the best eating town in the world, and you two know it well." },
+
+  /* ===================== POKEMON (Elena & Cece's domain) ======== */
+  { q: "Which yellow, electric Pokemon is the franchise's mascot - and the one Elena and Cece won't stop talking about?",
+    options: ["Pikachu", "Charizard", "Squirtle", "Jigglypuff"],
+    answer: 0,
+    fact: "Pikachu. You knew this one. You've heard the name approximately ten thousand times. You're welcome." },
+  { q: "In Pokemon, what do you throw to catch a wild Pokemon?",
+    options: ["A net", "A Poke Ball", "A lasso", "A Master Net"],
+    answer: 1,
+    fact: "A Poke Ball. Gotta catch 'em all - a phrase that has echoed through this household relentlessly." },
+  { q: "What's the name of the mobile game Elena and Cece play on walks, catching Pokemon in the real world?",
+    options: ["Pokemon GO", "Pokemon Walk", "Pokemon Quest", "Pokemon Live"],
+    answer: 0,
+    fact: "Pokemon GO - the reason a 'quick walk' somehow always takes 40 minutes and three detours." },
+  { q: "Pikachu evolves into which Pokemon?",
+    options: ["Raichu", "Pichu", "Zapdos", "Electabuzz"],
+    answer: 0,
+    fact: "Raichu. (Pichu is what it evolves FROM - a classic trap, and now you know more than you wanted to.)" },
 ];
 
 function daysSinceEpoch() {
@@ -565,7 +615,23 @@ function renderQuestion() {
   if (already) {
     unlockPhoto();
     fb.innerHTML = `<span class="fact">${q.fact}</span>`;
+    showSeePhoto();
   }
+}
+
+function showSeePhoto() {
+  const b = document.getElementById('seephoto');
+  b.hidden = false;
+  b.onclick = enterReveal;
+}
+function enterReveal() {
+  document.body.classList.add('revealed');
+  document.getElementById('taphint').hidden = false;
+  // tap anywhere to bring the card back
+  setTimeout(() => document.addEventListener('click', exitReveal, { once: true }), 50);
+}
+function exitReveal() {
+  document.body.classList.remove('revealed');
 }
 
 function handleAnswer(btn, i, q) {
@@ -581,6 +647,7 @@ function handleAnswer(btn, i, q) {
       showScore();
     }
     fb.innerHTML = `<span class="fact">${q.fact}</span>`;
+    showSeePhoto();
   } else {
     // try-again: mark this one wrong, let the rest stay live
     btn.classList.add('wrong');
