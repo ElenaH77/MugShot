@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Today, for Chris</title>
+<title>Mug Shot</title>
 <style>
   :root {
     --steam:   #fbf8f2;
@@ -138,9 +138,17 @@
 
   .loading {
     position: absolute; inset: 0; z-index: 3;
-    display: flex; align-items: center; justify-content: center;
+    /* the family mug-shot as a full-screen loader; dark theme fills the letterbox
+       so no face (or the dog's placard) ever gets cropped. Falls back to plain
+       dark + text if the image fails to load. */
+    background: #1a1512 url("assets/loading.jpg") center / contain no-repeat;
+    display: flex; align-items: flex-end; justify-content: center;
+  }
+  .loading span {
+    margin-bottom: calc(26px + env(safe-area-inset-bottom));
     font-family: 'SF Mono', ui-monospace, Menlo, monospace;
-    font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: rgba(251,248,242,.5);
+    font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: rgba(251,248,242,.55);
+    text-shadow: 0 1px 12px rgba(0,0,0,.8);
   }
 </style>
 </head>
@@ -165,7 +173,7 @@
     </div>
   </div>
   <div class="tap-hint" id="taphint" hidden>tap anywhere to return</div>
-  <div class="loading" id="loading">warming up&hellip;</div>
+  <div class="loading" id="loading"><span>warming up&hellip;</span></div>
 
 <script>
 /* ================================================================
@@ -186,7 +194,7 @@ const GH_BRANCH = "main";       // your branch (usually "main")
    When false: normal one-per-day behavior with the saved counter.
    >>> REMEMBER to set this back to false before you print the QR! <<<
    ================================================================ */
-const TEST_MODE = true;
+const TEST_MODE = false;
 
 /* ================================================================
    QUESTIONS - the only thing you edit. One per day, loops.
@@ -302,19 +310,19 @@ const QUESTIONS = [
 
   /* ===================== ENERGY (WIND & SOLAR) ================== */
   { q: "What part of a wind turbine actually converts spinning motion into electricity?",
-    options: ["The blades", "The generator", "The tower", "The nacelle cover"],
+    options: ["The gearbox", "The generator", "The inverter", "The yaw drive"],
     answer: 1,
-    fact: "The generator, housed in the nacelle - the blades just turn the shaft that drives it." },
+    fact: "The generator, housed in the nacelle - the gearbox speeds up the shaft, the inverter conditions the output, but the generator is what makes the electricity." },
   { q: "What does the \"PV\" in solar PV panels stand for?",
     options: ["Power Voltage", "Photovoltaic", "Peak Value", "Positive Volt"],
     answer: 1,
     fact: "Photovoltaic - turning sunlight straight into electricity, no moving parts." },
   { q: "Roughly how long does it take sunlight to reach Earth, powering every solar panel out there?",
-    options: ["About 8 minutes", "About 8 seconds", "About 8 hours", "Instantly"],
-    answer: 0,
+    options: ["About 8 seconds", "About 8 minutes", "About 80 minutes", "About 8 hours"],
+    answer: 1,
     fact: "About 8 minutes 20 seconds - so your panels run on slightly-old sunlight." },
   { q: "The famous grid 'duck curve' describes the daily challenge created by lots of which energy source?",
-    options: ["Wind", "Solar", "Coal", "Nuclear"],
+    options: ["Wind", "Solar", "Hydro", "Geothermal"],
     answer: 1,
     fact: "Solar - midday overproduction then a steep evening ramp, drawn out it looks like a duck." },
   { q: "LEGO's new U.S. factory is being built in Chesterfield, Virginia, with what feature on site?",
@@ -358,9 +366,9 @@ const QUESTIONS = [
     answer: 0,
     fact: "Tatooine - twin suns, moisture farms, and a galaxy's worth of trouble passing through." },
   { q: "In the Mandalorian, what species is \"Baby Yoda\" (Grogu)?",
-    options: ["Officially unnamed - same as Yoda", "A Jawa", "A Twi'lek", "A Rodian"],
+    options: ["Same species as Yoda", "A young Jawa", "A rare Twi'lek", "A Force-sensitive Rodian"],
     answer: 0,
-    fact: "Grogu's species has never been named - the same mystery as Yoda himself." },
+    fact: "Grogu is the same species as Yoda - which has never actually been given a name. The same mystery as Yoda himself." },
 
   /* ========================= POKER / WSOP ======================= */
   { q: "In poker, which hand is the strongest?",
@@ -408,9 +416,9 @@ const QUESTIONS = [
     answer: 0,
     fact: "Pawnee - first in friendship, fifth in obesity." },
   { q: "What food does Ron Swanson love above all others?",
-    options: ["Salad", "Breakfast / bacon and eggs", "Sushi", "Pasta"],
+    options: ["Steak", "Bacon and eggs", "Turkey legs", "Barbecue ribs"],
     answer: 1,
-    fact: "Breakfast food - \"Give me all the bacon and eggs you have.\"" },
+    fact: "Breakfast food - \"Give me all the bacon and eggs you have.\" (Steak is a close second - this one was a real trap.)" },
   { q: "What is Leslie Knope's all-consuming favorite breakfast food and friendship gift?",
     options: ["Waffles", "Pancakes", "Donuts", "Bagels"],
     answer: 0,
@@ -446,17 +454,17 @@ const QUESTIONS = [
     answer: 1,
     fact: "Advertising - Madison Avenue in the 1960s, hence 'Mad Men.'" },
   { q: "What is Don Draper's actual birth name, revealed over the series?",
-    options: ["Dick Whitman", "Don Draper (it's real)", "Bert Cooper", "Roger Sterling"],
+    options: ["Dick Whitman", "Adam Whitman", "Bert Cooper", "Roger Sterling"],
     answer: 0,
-    fact: "Dick Whitman - he took a dead man's identity in Korea. The show's central secret." },
+    fact: "Dick Whitman - he took a dead man's identity in Korea. (Adam Whitman is his half-brother, the man who knew the truth.)" },
 
   /* ===================== COMMUNITY ============================== */
   { q: "Community is set at which (very community) college?",
     options: ["Greendale", "Riverdale", "Hawthorne", "City College"],
     answer: 0,
     fact: "Greendale Community College - home of the Human Beings and endless paintball wars." },
-  { q: "What catchphrase does Troy and Abed's hyper-competent friend Annie's... actually, who says \"Cool. Cool cool cool\"?",
-    options: ["Abed", "Jeff Winger", "Pierce", "The Dean"],
+  { q: "In Community, which character constantly deflects with \"Cool. Cool cool cool\"?",
+    options: ["Abed", "Jeff Winger", "Pierce", "Troy"],
     answer: 1,
     fact: "Jeff Winger - the disbarred lawyer whose entire personality is deflecting with 'cool cool cool.'" },
 
