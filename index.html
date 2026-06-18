@@ -143,7 +143,9 @@
        dark + text if the image fails to load. */
     background: #1a1512 url("assets/loading.jpg") center / contain no-repeat;
     display: flex; align-items: flex-end; justify-content: center;
+    transition: opacity .7s ease;
   }
+  .loading.hide { opacity: 0; pointer-events: none; }
   .loading span {
     margin-bottom: calc(26px + env(safe-area-inset-bottom));
     font-family: 'SF Mono', ui-monospace, Menlo, monospace;
@@ -194,7 +196,7 @@ const GH_BRANCH = "main";       // your branch (usually "main")
    When false: normal one-per-day behavior with the saved counter.
    >>> REMEMBER to set this back to false before you print the QR! <<<
    ================================================================ */
-const TEST_MODE = false;
+const TEST_MODE = true;
 
 /* ================================================================
    QUESTIONS - the only thing you edit. One per day, loops.
@@ -672,6 +674,19 @@ async function loadPhotos() {
   return files.filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f.name)).map(f => f.download_url);
 }
 
+/* Keep the family mug-shot loader on screen for at least this long, even if the
+   daily photo loads instantly - it's part of the gift, let it breathe. */
+const LOADER_MIN_MS = 2800;
+const loaderStart = Date.now();
+function hideLoader() {
+  const el = document.getElementById('loading');
+  const wait = Math.max(0, LOADER_MIN_MS - (Date.now() - loaderStart));
+  setTimeout(() => {
+    el.classList.add('hide');                 // fade out
+    setTimeout(() => { el.style.display = 'none'; }, 700);
+  }, wait);
+}
+
 async function start() {
   if (TEST_MODE) {
     const wm = document.querySelector('.wordmark');
@@ -685,15 +700,15 @@ async function start() {
       const img = new Image();
       img.onload = () => {
         document.getElementById('photo').style.backgroundImage = `url("${url}")`;
-        document.getElementById('loading').style.display = 'none';
+        hideLoader();
       };
-      img.onerror = () => { document.getElementById('loading').style.display = 'none'; };
+      img.onerror = hideLoader;
       img.src = url;
     } else {
-      document.getElementById('loading').style.display = 'none';
+      hideLoader();
     }
   } catch (e) {
-    document.getElementById('loading').style.display = 'none';
+    hideLoader();
   }
 }
 start();
