@@ -666,12 +666,22 @@ function markSolvedToday() {
   localStorage.setItem('mug_solved_day', todayKey());
 }
 
-/* normal mode: one stable pick per day. test mode: fresh random each load. */
+function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
+
+/* normal mode: one stable pick per day. test mode: fresh random each load.
+   The questions/photos are grouped by topic in the array, so a plain
+   day-by-day +1 walk produces long same-theme streaks (e.g. several
+   Claremont questions in a row). Instead we step by a STRIDE chosen
+   coprime to the length: this scrambles the order so consecutive days
+   land in different topics, while still guaranteeing every item appears
+   exactly once before any repeats (a full cycle of length `len`). */
 function pickIndex(len) {
   if (!len) return -1;
   if (TEST_MODE) return Math.floor(Math.random() * len);
   const d = daysSinceEpoch();
-  return ((d % len) + len) % len;
+  let stride = Math.max(1, Math.round(len * 0.382));   // ~golden ratio: well spread
+  while (gcd(stride, len) !== 1) stride++;              // make it coprime to len
+  return ((d * stride) % len + len) % len;
 }
 function pickByDay(arr) {
   const i = pickIndex(arr.length);
